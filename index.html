@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>PokemonGuessr</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-light: #f0f0f0;
+      --bg-dark: #1a1a1a;
+      --text-light: #000;
+      --text-dark: #fff;
+      --accent: #ffcc00;
+      --pixel-border: 4px solid #000;
+      --pixel-border-dark: 4px solid #555;
+    }
+
+    body {
+      font-family: 'Press Start 2P', cursive;
+      margin: 0;
+      padding: 10px;
+      background-color: var(--bg-light);
+      color: var(--text-light);
+      transition: background 0.3s, color 0.3s;
+    }
+
+    body.dark {
+      background-color: var(--bg-dark);
+      color: var(--text-dark);
+    }
+
+    .app {
+      text-align: center;
+      max-width: 1200px;
+      margin: auto;
+    }
+
+    h1 {
+      font-size: 16px;
+      margin-bottom: 10px;
+    }
+
+    input {
+      padding: 10px;
+      width: 80%;
+      max-width: 400px;
+      font-size: 10px;
+      border: var(--pixel-border);
+      background: white;
+    }
+    
+    body.dark input {
+        background: #2c2c2c;
+        color: white;
+        border: var(--pixel-border-dark);
+    }
+
+    ul#suggestions {
+      list-style: none;
+      padding: 0;
+      max-height: 150px;
+      overflow-y: auto;
+      width: 80%;
+      max-width: 424px; /* Input width + padding + border */
+      margin: 4px auto 0;
+      text-align: left;
+    }
+
+    ul#suggestions li {
+      background: #fff;
+      color: #000;
+      padding: 8px;
+      border: var(--pixel-border);
+      cursor: pointer;
+    }
+    
+    body.dark ul#suggestions li {
+        background: #555;
+        color: #fff;
+        border: var(--pixel-border-dark);
+    }
+
+    /* Table Styles */
+    .results-table {
+        width: 100%;
+        margin-top: 20px;
+        border-collapse: collapse;
+        table-layout: fixed;
+    }
+
+    .results-table th, .results-table td {
+        border: var(--pixel-border);
+        padding: 5px;
+        font-size: 8px;
+        text-align: center;
+        vertical-align: middle;
+        word-break: break-word;
+    }
+    
+    body.dark .results-table th, body.dark .results-table td {
+        border-color: #555;
+    }
+
+    .results-table thead th {
+        background: #ddd;
+    }
+    
+    body.dark .results-table thead th {
+        background: #1a1a1a;
+    }
+    
+    body.dark .results-table tbody td {
+        background-color: #1a1a1a;
+    }
+
+    /* Cell Color States */
+    .red { background: #e74c3c !important; }
+    .yellow { background: #f1c40f !important; color: black !important; }
+    .green { background: #2ecc71 !important; }
+    .orange { background: #e67e22 !important; color: black !important; }
+
+    .arrow {
+      font-size: 10px;
+      margin-left: 4px;
+    }
+
+    .poke-img {
+      width: 80px;
+      height: 80px;
+      image-rendering: pixelated;
+      background: white;
+      margin: auto;
+      display: block;
+    }
+
+    .header-poke-img {
+        width: 48px;
+        height: 48px;
+        margin-top: 4px;
+    }
+
+    .toggle-btn {
+      background: var(--accent);
+      padding: 5px 10px;
+      margin: 10px;
+      border: var(--pixel-border);
+      font-size: 8px;
+      cursor: pointer;
+      color: var(--text-light);
+    }
+
+    #guessCount {
+      font-size: 10px;
+      margin-bottom: 10px;
+    }
+    
+    /* Modal Styles */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.75);
+        display: none; /* Hidden by default */
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+    }
+
+    .modal-content {
+        background-color: var(--bg-light);
+        color: var(--text-light);
+        padding: 20px;
+        border: var(--pixel-border);
+        width: 90%;
+        max-width: 1000px;
+    }
+    
+    body.dark .modal-content {
+        background-color: var(--bg-dark);
+        color: var(--text-dark);
+        border: var(--pixel-border-dark);
+    }
+
+    .modal-content h2 {
+        font-size: 14px;
+        margin-top: 0;
+    }
+
+    .modal-close-btn {
+        background: #e74c3c;
+        padding: 8px 15px;
+        margin-top: 20px;
+        border: var(--pixel-border);
+        font-size: 10px;
+        cursor: pointer;
+        color: white;
+    }
+
+    @media (max-width: 768px) {
+      .results-table th, .results-table td {
+        font-size: 7px;
+        padding: 3px;
+      }
+      .poke-img {
+        width: 64px;
+        height: 64px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .results-table th, .results-table td {
+        font-size: 6px;
+      }
+      .poke-img {
+        width: 48px;
+        height: 48px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <h1>POKEMONGUESSR</h1>
+    <button class="toggle-btn" onclick="toggleTheme()">Toggle Theme</button>
+    <div id="guessCount">Tries Left: 15</div>
+    <input type="text" id="guessInput" placeholder="Guess the Pokémon..." autocomplete="off" />
+    <ul id="suggestions"></ul>
+
+    <table class="results-table">
+      <thead>
+        <tr>
+          <th>
+            <div>Pokémon</div>
+          </th>
+          <th>Type</th>
+          <th>HP</th>
+          <th>Attack</th>
+          <th>Defense</th>
+          <th>Sp. Atk</th>
+          <th>Sp. Def</th>
+          <th>Speed</th>
+          <th>Height</th>
+          <th>Weight</th>
+        </tr>
+      </thead>
+      <tbody id="guessesContainer">
+        <!-- Guesses will be inserted here -->
+      </tbody>
+    </table>
+
+    <!-- Reveal Modal -->
+    <div id="revealModal" class="modal-overlay">
+        <div class="modal-content">
+            <h2 id="modalTitle"></h2>
+            <div id="modalBody"></div>
+            <button class="modal-close-btn" onclick="location.reload()">Play Again</button>
+        </div>
+    </div>
+  </div>
+
+  <script>
+    const input = document.getElementById("guessInput");
+    const suggestions = document.getElementById("suggestions");
+    const guessesContainer = document.getElementById("guessesContainer");
+    const guessCountDisplay = document.getElementById("guessCount");
+    const revealModal = document.getElementById("revealModal");
+    const modalTitle = document.getElementById("modalTitle");
+    const modalBody = document.getElementById("modalBody");
+
+    let pokemonList = [];
+    let targetPokemon = null;
+    let triesLeft = 15;
+    const guessedPokemonNames = new Set(); // To track duplicate guesses
+
+    function toggleTheme() {
+      document.body.classList.toggle("dark");
+    }
+
+    async function loadPokemonList() {
+      try {
+        const res = await fetch("https://pokeapi.co/api/v2/pokemon?limit=151"); // Gen 1
+        const data = await res.json();
+        pokemonList = data.results.map(p => ({ name: p.name.toLowerCase(), url: p.url }));
+      } catch (e) {
+        console.error("Failed to load Pokémon list:", e);
+        alert("Could not load Pokémon data. Please check your connection and refresh.");
+      }
+    }
+
+    async function getPokemonByDateOffset(offset = 0) {
+      const date = new Date();
+      date.setDate(date.getDate() + offset);
+      const seed = date.toISOString().split("T")[0];
+      const index = Math.floor(new Date(seed).getTime() / 10000000) % pokemonList.length;
+      const res = await fetch(pokemonList[index].url);
+      return await res.json();
+    }
+
+    input.addEventListener("input", () => {
+      const term = input.value.trim().toLowerCase();
+      suggestions.innerHTML = "";
+      if (!term) return;
+      const matches = pokemonList.filter(p => p.name.startsWith(term)).slice(0, 5);
+      matches.forEach(p => {
+        const li = document.createElement("li");
+        li.textContent = p.name.charAt(0).toUpperCase() + p.name.slice(1);
+        li.onclick = () => {
+          input.value = "";
+          suggestions.innerHTML = "";
+          if (triesLeft > 0 && targetPokemon) {
+            guessPokemon(p.name);
+          }
+        };
+        suggestions.appendChild(li);
+      });
+    });
+
+    async function guessPokemon(name) {
+      if (triesLeft <= 0) return;
+
+      // Prevent duplicate guesses
+      if (guessedPokemonNames.has(name)) {
+          alert(`You have already guessed ${name}!`);
+          return;
+      }
+
+      try {
+        const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${name.toLowerCase()}`);
+        if (!res.ok) throw new Error("Pokémon not found");
+        const guessed = await res.json();
+        
+        guessedPokemonNames.add(name); // Add to the set of guessed Pokémon
+        const row = createGuessRow(guessed, targetPokemon);
+        guessesContainer.prepend(row);
+
+        triesLeft--;
+        guessCountDisplay.textContent = `Tries Left: ${triesLeft}`;
+
+        if (guessed.name === targetPokemon.name) {
+          showRevealModal(targetPokemon, true);
+        } else if (triesLeft === 0) {
+          showRevealModal(targetPokemon, false);
+        }
+      } catch (e) {
+        console.error("Error fetching Pokémon:", e);
+        alert("Error fetching that Pokémon. Check the name and try again.");
+      }
+    }
+
+    function createGuessRow(pokemon, target) {
+      const row = document.createElement("tr");
+
+      // 1. Image & Name
+      const cellImg = row.insertCell();
+      const img = document.createElement("img");
+      img.className = "poke-img";
+      img.src = pokemon.sprites.front_default || `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemon.id}.png`;
+      img.alt = pokemon.name;
+      cellImg.appendChild(img);
+      const nameDiv = document.createElement('div');
+      nameDiv.textContent = pokemon.name.toUpperCase();
+      cellImg.appendChild(nameDiv);
+      // Add green background if the name is correct
+      if (pokemon.name === target.name) {
+          cellImg.classList.add('green');
+      }
+
+      // 2. Type
+      const cellType = row.insertCell();
+      const guessedTypes = pokemon.types.map(t => t.type.name);
+      const targetTypes = target.types.map(t => t.type.name);
+      cellType.textContent = guessedTypes.join(", ");
+      cellType.className = getTypeClass(guessedTypes, targetTypes);
+
+      // 3-8. Stats
+      const statNames = ["hp", "attack", "defense", "special-attack", "special-defense", "speed"];
+      statNames.forEach(statName => {
+        const guessedStat = pokemon.stats.find(s => s.stat.name === statName).base_stat;
+        const targetStat = target.stats.find(s => s.stat.name === statName).base_stat;
+        const cellStat = row.insertCell();
+        const color = getStatColor(guessedStat, targetStat);
+        const arrow = guessedStat === targetStat ? "" : guessedStat < targetStat ? "⬆️" : "⬇️";
+        cellStat.innerHTML = `${guessedStat} <span class="arrow">${arrow}</span>`;
+        cellStat.className = color;
+      });
+      
+      // 9. Height & 10. Weight
+      ["height", "weight"].forEach(field => {
+        const cell = row.insertCell();
+        const guessedValue = pokemon[field];
+        const targetValue = target[field];
+        const color = getStatColor(guessedValue, targetValue);
+        const arrow = guessedValue === targetValue ? "" : guessedValue < targetValue ? "⬆️" : "⬇️";
+        cell.innerHTML = `${guessedValue} <span class="arrow">${arrow}</span>`;
+        cell.className = color;
+      });
+
+      return row;
+    }
+
+    function getStatColor(guess, target) {
+      if (guess === target) return "green";
+      const diff = Math.abs(guess - target);
+      if (diff <= 10) return "yellow";
+      return "red";
+    }
+
+    function getTypeClass(guessedTypes, targetTypes) {
+        if (JSON.stringify(guessedTypes.sort()) === JSON.stringify(targetTypes.sort())) {
+            return 'green';
+        }
+        const isPartialMatch = guessedTypes.some(t => targetTypes.includes(t));
+        if (isPartialMatch) {
+            return 'orange';
+        }
+        return 'red';
+    }
+    
+    function showRevealModal(pokemon, isWin) {
+        triesLeft = 0;
+        input.disabled = true;
+
+        if (isWin) {
+            modalTitle.textContent = "🎉 Correct! You guessed it! 🎉";
+        } else {
+            modalTitle.textContent = `❌ Out of tries! The Pokémon was...`;
+        }
+
+        const table = document.createElement('table');
+        table.className = 'results-table';
+        const thead = table.createTHead();
+        const tbody = table.createTBody();
+        
+        // Use the main table's header as a template
+        const mainTableHeader = document.querySelector('.results-table thead').cloneNode(true);
+        thead.appendChild(mainTableHeader.firstChild);
+        
+        const correctRow = createGuessRow(pokemon, pokemon);
+        tbody.appendChild(correctRow);
+        
+        modalBody.innerHTML = ''; // Clear previous content
+        modalBody.appendChild(table);
+        
+        revealModal.style.display = 'flex';
+    }
+
+    (async function init() {
+      await loadPokemonList();
+      if (pokemonList.length > 0) {
+        targetPokemon = await getPokemonByDateOffset(0);
+      }
+    })();
+  </script>
+</body>
+</html>
